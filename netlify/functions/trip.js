@@ -1,6 +1,12 @@
-const { getStore } = require("@netlify/blobs");
+let tripStore;
 
-const store = getStore("trips");
+async function getTripStore() {
+  if (!tripStore) {
+    const { getStore } = await import("@netlify/blobs");
+    tripStore = getStore("trips");
+  }
+  return tripStore;
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") {
@@ -8,10 +14,12 @@ exports.handler = async (event) => {
   }
 
   try {
+    const store = await getTripStore();
+
     if (event.httpMethod === "GET") {
       const tripId = event.queryStringParameters?.tripId;
       const pin = event.queryStringParameters?.pin;
-      const record = await readTrip(tripId, pin);
+      const record = await readTrip(store, tripId, pin);
       return response(200, record);
     }
 
@@ -36,7 +44,7 @@ exports.handler = async (event) => {
   }
 };
 
-async function readTrip(tripId, pin) {
+async function readTrip(store, tripId, pin) {
   validatePair(tripId, pin);
   const record = await store.get(tripId, { type: "json" });
   if (!record) throw httpError(404, "trip not found");
