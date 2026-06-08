@@ -1,38 +1,39 @@
 import { getStore } from "@netlify/blobs";
 
-const tripStore = getStore("trips");
-
-export const handler = async (event) => {
-  if (event.httpMethod === "OPTIONS") {
-    return response(204, "");
+export default async (request) => {
+  if (request.method === "OPTIONS") {
+    return jsonResponse(204, "");
   }
 
   try {
-    if (event.httpMethod === "GET") {
-      const tripId = event.queryStringParameters?.tripId;
-      const pin = event.queryStringParameters?.pin;
-      const record = await readTrip(tripStore, tripId, pin);
-      return response(200, record);
+    const store = getStore("trips");
+
+    if (request.method === "GET") {
+      const url = new URL(request.url);
+      const tripId = url.searchParams.get("tripId");
+      const pin = url.searchParams.get("pin");
+      const record = await readTrip(store, tripId, pin);
+      return jsonResponse(200, record);
     }
 
-    if (event.httpMethod === "PUT") {
-      const body = JSON.parse(event.body || "{}");
+    if (request.method === "PUT") {
+      const body = await request.json();
       const { tripId, pin, trip } = body;
       validatePair(tripId, pin);
       if (!trip || typeof trip !== "object") {
-        return response(400, { error: "trip is required" });
+        return jsonResponse(400, { error: "trip is required" });
       }
 
       const updatedAt = new Date().toISOString();
       const record = { tripId, pinHash: hashPin(pin), trip, updatedAt };
-      await tripStore.setJSON(tripId, record);
-      return response(200, { tripId, updatedAt });
+      await store.setJSON(tripId, record);
+      return jsonResponse(200, { tripId, updatedAt });
     }
 
-    return response(405, { error: "method not allowed" });
+    return jsonResponse(405, { error: "method not allowed" });
   } catch (error) {
     const status = error.statusCode || 500;
-    return response(status, { error: error.message || "server error" });
+    return jsonResponse(status, { error: error.message || "server error" });
   }
 };
 
@@ -71,15 +72,14 @@ function httpError(statusCode, message) {
   return error;
 }
 
-function response(statusCode, body) {
-  return {
-    statusCode,
+function jsonResponse(status, body) {
+  return new Response(typeof body === "string" ? body : JSON.stringify(body), {
+    status,
     headers: {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Headers": "Content-Type",
       "Access-Control-Allow-Methods": "GET, PUT, OPTIONS"
-    },
-    body: typeof body === "string" ? body : JSON.stringify(body)
-  };
+    }
+  });
 }
