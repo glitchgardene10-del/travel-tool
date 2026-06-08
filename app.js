@@ -494,7 +494,7 @@ async function pushTripToCloud() {
   const apiBase = getApiBase();
   updateSyncStatus("正在上傳...");
   try {
-    const response = await fetch(`${apiBase}/.netlify/functions/trip`, {
+    const response = await fetch(`${apiBase}/.netlify/functions/trip-sync`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -520,7 +520,7 @@ async function pullTripFromCloud() {
   const apiBase = getApiBase();
   updateSyncStatus("正在抓回...");
   try {
-    const url = new URL(`${apiBase}/.netlify/functions/trip`);
+    const url = new URL(`${apiBase}/.netlify/functions/trip-sync`);
     url.searchParams.set("tripId", syncConfig.tripId);
     url.searchParams.set("pin", syncConfig.pin);
     const response = await fetch(url);

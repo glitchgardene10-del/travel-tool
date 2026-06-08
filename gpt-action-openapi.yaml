@@ -6,7 +6,7 @@ info:
 servers:
   - url: https://YOUR-NETLIFY-SITE.netlify.app
 paths:
-  /.netlify/functions/trip:
+  /.netlify/functions/trip-sync:
     get:
       operationId: getTrip
       summary: Get the current travel itinerary.
