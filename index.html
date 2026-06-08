@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#176b87">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="旅遊神器">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>旅遊神器</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icon.svg">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">手機旅遊規劃</p>
+          <h1 id="tripTitle">旅遊神器</h1>
+          <p id="tripMeta" class="trip-meta">準備載入行程...</p>
+        </div>
+        <button class="icon-button" id="editTripButton" type="button" aria-label="編輯旅程">
+          <span aria-hidden="true">✎</span>
+        </button>
+      </header>
+
+      <main>
+        <section class="summary-band" aria-label="旅程摘要">
+          <div>
+            <span class="summary-label">今日項目</span>
+            <strong id="todayCount">0</strong>
+          </div>
+          <div>
+            <span class="summary-label">總花費</span>
+            <strong id="totalCost">$0</strong>
+          </div>
+          <div>
+            <span class="summary-label">備份狀態</span>
+            <strong id="backupStatus">本機</strong>
+          </div>
+        </section>
+
+        <section class="day-strip" aria-label="選擇日期">
+          <div id="dayTabs" class="day-tabs"></div>
+          <button id="addDayButton" class="day-add" type="button">＋</button>
+        </section>
+
+        <section class="quick-actions" aria-label="快速操作">
+          <button id="addItemButton" class="primary-button" type="button">
+            <span aria-hidden="true">＋</span>
+            新增行程
+          </button>
+          <button id="syncButton" class="secondary-button" type="button">
+            <span aria-hidden="true">↔</span>
+            GPT
+          </button>
+          <button id="exportButton" class="secondary-button" type="button">
+            <span aria-hidden="true">⇩</span>
+            匯出
+          </button>
+          <label class="secondary-button file-button">
+            <span aria-hidden="true">⇧</span>
+            匯入
+            <input id="importInput" type="file" accept="application/json">
+          </label>
+        </section>
+
+        <section class="tool-panel" aria-label="搜尋與篩選">
+          <label class="search-box">
+            <span aria-hidden="true">⌕</span>
+            <input id="searchInput" type="search" placeholder="搜尋景點、地址、備註">
+          </label>
+          <div class="filter-row" id="filterRow" aria-label="分類篩選"></div>
+        </section>
+
+        <section class="timeline-section" aria-live="polite">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">當日時間線</p>
+              <h2 id="selectedDayTitle">Day 1</h2>
+            </div>
+            <button id="sortButton" class="text-button" type="button">依時間排序</button>
+          </div>
+          <div id="timeline" class="timeline"></div>
+        </section>
+
+        <section class="notes-section">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">出門前確認</p>
+              <h2>隨身清單</h2>
+            </div>
+          </div>
+          <div class="checklist" id="checklist"></div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="itemDialog" class="sheet">
+      <form method="dialog" id="itemForm">
+        <div class="sheet-header">
+          <div>
+            <p class="eyebrow">行程項目</p>
+            <h2 id="itemDialogTitle">新增行程</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="submit" aria-label="關閉">×</button>
+        </div>
+        <input type="hidden" id="itemId">
+        <div class="form-grid">
+          <label>
+            名稱
+            <input id="itemName" required placeholder="例如：淺草寺">
+          </label>
+          <label>
+            類型
+            <select id="itemType">
+              <option value="景點">景點</option>
+              <option value="餐廳">餐廳</option>
+              <option value="住宿">住宿</option>
+              <option value="交通">交通</option>
+              <option value="票券">票券</option>
+              <option value="購物">購物</option>
+              <option value="其他">其他</option>
+            </select>
+          </label>
+          <label>
+            日期
+            <select id="itemDay"></select>
+          </label>
+          <label>
+            時間
+            <input id="itemTime" type="time">
+          </label>
+          <label class="wide">
+            地址 / 地點
+            <input id="itemAddress" placeholder="可貼 Google Maps 地址">
+          </label>
+          <label>
+            預估花費
+            <input id="itemCost" type="number" inputmode="decimal" min="0" step="1" placeholder="0">
+          </label>
+          <label>
+            幣別
+            <input id="itemCurrency" placeholder="TWD / JPY / USD">
+          </label>
+          <label class="wide">
+            連結
+            <input id="itemUrl" type="url" placeholder="訂房、票券、官網或地圖連結">
+          </label>
+          <label class="wide">
+            備註
+            <textarea id="itemNote" rows="4" placeholder="訂位資訊、票券編號、注意事項"></textarea>
+          </label>
+        </div>
+        <div class="sheet-actions">
+          <button id="deleteItemButton" class="danger-button" type="button">刪除</button>
+          <button class="secondary-button" value="cancel" type="submit">取消</button>
+          <button class="primary-button" id="saveItemButton" value="default" type="submit">儲存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="tripDialog" class="sheet">
+      <form method="dialog" id="tripForm">
+        <div class="sheet-header">
+          <div>
+            <p class="eyebrow">旅程設定</p>
+            <h2>編輯旅程</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="submit" aria-label="關閉">×</button>
+        </div>
+        <div class="form-grid">
+          <label class="wide">
+            旅程名稱
+            <input id="tripNameInput" required>
+          </label>
+          <label>
+            出發日期
+            <input id="startDateInput" type="date">
+          </label>
+          <label>
+            主要幣別
+            <input id="currencyInput" placeholder="TWD">
+          </label>
+          <label class="wide">
+            備註
+            <textarea id="tripNoteInput" rows="3"></textarea>
+          </label>
+        </div>
+        <div class="sheet-actions">
+          <button class="secondary-button" value="cancel" type="submit">取消</button>
+          <button class="primary-button" value="default" type="submit">儲存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="syncDialog" class="sheet">
+      <form method="dialog" id="syncForm">
+        <div class="sheet-header">
+          <div>
+            <p class="eyebrow">GPT Actions</p>
+            <h2>同步與配對</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="submit" aria-label="關閉">×</button>
+        </div>
+        <div class="sync-panel">
+          <p>把行程同步到雲端後，你的 Custom GPT 可以讀取並寫回行程。</p>
+          <label>
+            Trip ID
+            <input id="tripIdInput" readonly>
+          </label>
+          <label>
+            PIN
+            <input id="tripPinInput" readonly>
+          </label>
+          <label>
+            API 網址
+            <input id="apiBaseInput" placeholder="部署後的網址，例如 https://xxx.netlify.app">
+          </label>
+          <p id="syncStatusText" class="sync-status">尚未同步</p>
+        </div>
+        <div class="sheet-actions sync-actions">
+          <button id="generatePairButton" class="secondary-button" type="button">產生配對碼</button>
+          <button id="pushSyncButton" class="primary-button" type="button">上傳行程</button>
+          <button id="pullSyncButton" class="secondary-button" type="button">抓回行程</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="app.js" type="module"></script>
+  </body>
+</html>

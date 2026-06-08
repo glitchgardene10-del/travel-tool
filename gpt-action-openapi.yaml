@@ -1,0 +1,62 @@
+openapi: 3.1.0
+info:
+  title: Travel Tool Actions
+  version: "1.0.0"
+  description: Read and update a user's travel itinerary.
+servers:
+  - url: https://YOUR-NETLIFY-SITE.netlify.app
+paths:
+  /.netlify/functions/trip:
+    get:
+      operationId: getTrip
+      summary: Get the current travel itinerary.
+      parameters:
+        - in: query
+          name: tripId
+          required: true
+          schema:
+            type: string
+          description: The trip pairing id shown in the travel tool.
+        - in: query
+          name: pin
+          required: true
+          schema:
+            type: string
+          description: The six digit PIN shown in the travel tool.
+      responses:
+        "200":
+          description: Current itinerary.
+          content:
+            application/json:
+              schema:
+                type: object
+        "403":
+          description: Invalid PIN.
+    put:
+      operationId: updateTrip
+      summary: Replace the itinerary after planning or optimization.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - tripId
+                - pin
+                - trip
+              properties:
+                tripId:
+                  type: string
+                pin:
+                  type: string
+                trip:
+                  type: object
+                  description: Full itinerary JSON. Preserve ids when editing existing days and items.
+      responses:
+        "200":
+          description: Itinerary updated.
+          content:
+            application/json:
+              schema:
+                type: object

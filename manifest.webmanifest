@@ -1,0 +1,19 @@
+{
+  "name": "旅遊神器",
+  "short_name": "旅遊神器",
+  "description": "手機優先的旅遊規劃與查詢工具",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f7f4",
+  "theme_color": "#176b87",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

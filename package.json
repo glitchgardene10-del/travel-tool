@@ -1,0 +1,12 @@
+{
+  "name": "travel-tool",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mobile-first travel planner PWA with GPT Actions sync.",
+  "scripts": {
+    "start": "python3 -m http.server 5173"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^9.1.2"
+  }
+}
