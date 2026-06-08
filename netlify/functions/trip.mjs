@@ -1,4 +1,4 @@
-import { getStore } from "@netlify/blobs";
+const memoryStore = new Map();
 
 export default async (request) => {
   if (request.method === "OPTIONS") {
@@ -6,13 +6,11 @@ export default async (request) => {
   }
 
   try {
-    const store = getStore("trips");
-
     if (request.method === "GET") {
       const url = new URL(request.url);
       const tripId = url.searchParams.get("tripId");
       const pin = url.searchParams.get("pin");
-      const record = await readTrip(store, tripId, pin);
+      const record = await readTrip(tripId, pin);
       return jsonResponse(200, record);
     }
 
@@ -26,7 +24,7 @@ export default async (request) => {
 
       const updatedAt = new Date().toISOString();
       const record = { tripId, pinHash: hashPin(pin), trip, updatedAt };
-      await store.setJSON(tripId, record);
+      await writeRecord(tripId, record);
       return jsonResponse(200, { tripId, updatedAt });
     }
 
@@ -37,9 +35,9 @@ export default async (request) => {
   }
 };
 
-async function readTrip(store, tripId, pin) {
+async function readTrip(tripId, pin) {
   validatePair(tripId, pin);
-  const record = await store.get(tripId, { type: "json" });
+  const record = await readRecord(tripId);
   if (!record) throw httpError(404, "trip not found");
   if (record.pinHash !== hashPin(pin)) throw httpError(403, "invalid pin");
   return {
@@ -47,6 +45,81 @@ async function readTrip(store, tripId, pin) {
     trip: record.trip,
     updatedAt: record.updatedAt
   };
+}
+
+async function readRecord(tripId) {
+  if (hasGithubStorage()) {
+    return readGithubRecord(tripId);
+  }
+  return memoryStore.get(tripId) || null;
+}
+
+async function writeRecord(tripId, record) {
+  if (hasGithubStorage()) {
+    await writeGithubRecord(tripId, record);
+    return;
+  }
+  memoryStore.set(tripId, record);
+}
+
+function hasGithubStorage() {
+  return Boolean(process.env.GITHUB_TOKEN && process.env.GITHUB_OWNER && process.env.GITHUB_REPO);
+}
+
+async function readGithubRecord(tripId) {
+  const path = githubPath(tripId);
+  const response = await githubFetch(path);
+  if (response.status === 404) return null;
+  if (!response.ok) throw httpError(502, "github read failed");
+  const data = await response.json();
+  const text = Buffer.from(data.content || "", "base64").toString("utf8");
+  return JSON.parse(text);
+}
+
+async function writeGithubRecord(tripId, record) {
+  const path = githubPath(tripId);
+  const current = await githubFetch(path);
+  let sha;
+  if (current.ok) {
+    const data = await current.json();
+    sha = data.sha;
+  } else if (current.status !== 404) {
+    throw httpError(502, "github write lookup failed");
+  }
+
+  const body = {
+    message: `Update ${tripId}`,
+    content: Buffer.from(JSON.stringify(record, null, 2), "utf8").toString("base64"),
+    branch: process.env.GITHUB_BRANCH || "main"
+  };
+  if (sha) body.sha = sha;
+
+  const response = await githubFetch(path, {
+    method: "PUT",
+    body: JSON.stringify(body)
+  });
+  if (!response.ok) throw httpError(502, "github write failed");
+}
+
+function githubPath(tripId) {
+  return `/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/contents/data/trips/${tripId}.json`;
+}
+
+function githubFetch(path, options = {}) {
+  const url = new URL(`https://api.github.com${path}`);
+  if (!options.method || options.method === "GET") {
+    url.searchParams.set("ref", process.env.GITHUB_BRANCH || "main");
+  }
+  return fetch(url, {
+    ...options,
+    headers: {
+      "Accept": "application/vnd.github+json",
+      "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`,
+      "Content-Type": "application/json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      ...(options.headers || {})
+    }
+  });
 }
 
 function validatePair(tripId, pin) {
