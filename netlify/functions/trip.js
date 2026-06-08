@@ -1,25 +1,17 @@
-let tripStore;
+import { getStore } from "@netlify/blobs";
 
-async function getTripStore() {
-  if (!tripStore) {
-    const { getStore } = await import("@netlify/blobs");
-    tripStore = getStore("trips");
-  }
-  return tripStore;
-}
+const tripStore = getStore("trips");
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   if (event.httpMethod === "OPTIONS") {
     return response(204, "");
   }
 
   try {
-    const store = await getTripStore();
-
     if (event.httpMethod === "GET") {
       const tripId = event.queryStringParameters?.tripId;
       const pin = event.queryStringParameters?.pin;
-      const record = await readTrip(store, tripId, pin);
+      const record = await readTrip(tripStore, tripId, pin);
       return response(200, record);
     }
 
@@ -33,7 +25,7 @@ exports.handler = async (event) => {
 
       const updatedAt = new Date().toISOString();
       const record = { tripId, pinHash: hashPin(pin), trip, updatedAt };
-      await store.setJSON(tripId, record);
+      await tripStore.setJSON(tripId, record);
       return response(200, { tripId, updatedAt });
     }
 
